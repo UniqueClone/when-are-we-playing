@@ -8,7 +8,7 @@ const timezones = [
 ];
 
 /**
- * Format the date to a string in the format "hh:mm AM/PM, ddd dd MMM"
+ * Format the date to a string in the format "HH:MM - ddd dd MMM"
  * @param date the date to format
  * @param tz the timezone to use for formatting
  * @returns the formatted date string
@@ -23,10 +23,9 @@ function formatTime(date: Date, tz: string) {
         day: '2-digit',
         month: 'short',
         year: 'numeric',
-    }); // Format currently "ddd dd MMM yyyy, hh:mm AM/PM"
+    });
 
     // Format to "HH:MM - ddd dd MMM"
-    // Time is in 24 hour format
     const [datePart, timePart] = formatted.split(', ');
     const [day, month, year] = datePart.split(' ');
     const [hour, minute] = timePart.split(':');
@@ -37,9 +36,80 @@ function formatTime(date: Date, tz: string) {
 }
 
 /**
+ * Convert a date to a datetime-local input value string in the context of a timezone
+ * @param date The date to convert
+ * @param tz The timezone to use
+ * @returns A string in format YYYY-MM-DDThh:mm suitable for datetime-local input
+ */
+function dateToLocalString(date: Date, tz: string): string {
+    if (!date) return '';
+    
+    // Get the parts in the target timezone
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone: tz,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    });
+    
+    const parts = formatter.formatToParts(date);
+    const partValues: {[key: string]: string} = {};
+    
+    parts.forEach(part => {
+        partValues[part.type] = part.value;
+    });
+    
+    // Format as YYYY-MM-DDThh:mm
+    return `${partValues.year}-${partValues.month}-${partValues.day}T${partValues.hour}:${partValues.minute}`;
+}
+
+/**
+ * Create a Date object representing the specified local time in the specified timezone
+ * @param localDateString The local date string (YYYY-MM-DDThh:mm)
+ * @param tz The timezone
+ * @returns A Date object
+ */
+function localStringToDate(localDateString: string, tz: string): Date {
+    if (!localDateString) return new Date();
+    
+    // Parse the local date string
+    const [datePart, timePart] = localDateString.split('T');
+    const [year, month, day] = datePart.split('-').map(Number);
+    const [hour, minute] = timePart.split(':').map(Number);
+    
+    // Create a date string with timezone for the browser to parse
+    const dateString = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`;
+    
+    // Use the Intl API to format the date for the specified timezone
+    const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: tz,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+        timeZoneName: 'short'
+    });
+    
+    // Create a temporary date object to get the timezone offset
+    const tempDate = new Date(dateString);
+    
+    // Get the parts from the formatter
+    const parts = formatter.formatToParts(tempDate);
+    const tzOffset = parts.find(part => part.type === 'timeZoneName')?.value || '';
+    
+    // Create a date string with timezone
+    return new Date(`${dateString} ${tzOffset}`);
+}
+
+/**
  * Add the event to google calendar
  * @param date the date to add to the calendar
- * @param tz the timezone to use for formatting
  */
 function addToCalendar(date: Date | null) {
     // Only run on client side
@@ -62,7 +132,7 @@ export default function Convert() {
     useEffect(() => {
         const currentDate = new Date();
         setDate(currentDate);
-        setInput(currentDate.toISOString().slice(0, 16));
+        setInput(dateToLocalString(currentDate, selectedTz));
     }, []);
 
     // Update input field with current date time in selected timezone
@@ -70,22 +140,21 @@ export default function Convert() {
         if (!newDate) {
             const currentDate = new Date();
             setDate(currentDate);
-            setInput(currentDate.toISOString().slice(0, 16));
+            setInput(dateToLocalString(currentDate, selectedTz));
             return;
         }
         
         setDate(newDate);
-        // Update input field with ISO string
-        setInput(newDate.toISOString().slice(0, 16));
+        setInput(dateToLocalString(newDate, selectedTz));
     };
 
     const handleInputChange = (value: string) => {
         setInput(value);
-        const newDate = new Date(value);
+        const newDate = localStringToDate(value, selectedTz);
         if (isNaN(newDate.getTime())) {
             const currentDate = new Date();
             setDate(currentDate);
-            setInput(currentDate.toISOString().slice(0, 16));
+            setInput(dateToLocalString(currentDate, selectedTz));
             return;
         }
         setDate(newDate);
@@ -93,14 +162,22 @@ export default function Convert() {
 
     /**
      * Handle timezone change.
-     * When timezone changes, we need to keep the same date/time representation
+     * When timezone changes, we keep the same visual time but in the new timezone
      * @param value the new timezone value
      */
     const handleTimezoneChange = (value: string) => {
-        setSelectedTz(value);
-        // Keep the same date object when timezone changes
         if (date) {
-            updateInputFromDate(date);
+            // Get the date parts from the current input
+            const localTime = input;
+            
+            // Set the new timezone
+            setSelectedTz(value);
+            
+            // Create a new date that has the same local time in the new timezone
+            const newDate = localStringToDate(localTime, value);
+            setDate(newDate);
+        } else {
+            setSelectedTz(value);
         }
     };
 
@@ -198,9 +275,7 @@ export default function Convert() {
 
                 <div className="mt-4 flex justify-center">
                     <button
-                        onClick={() => {
-                            addToCalendar(date);
-                        }}
+                        onClick={() => addToCalendar(date)}
                         className="px-4 py-2 text-white bg-blue-600 rounded hover:bg-blue-700"
                     >
                         Add to Calendar
