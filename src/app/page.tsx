@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const timezones = [
     { label: 'Dublin', tz: 'Europe/Dublin' },
@@ -41,7 +41,12 @@ function formatTime(date: Date, tz: string) {
  * @param date the date to add to the calendar
  * @param tz the timezone to use for formatting
  */
-function addToCalendar(date: Date) {
+function addToCalendar(date: Date | null) {
+    // Only run on client side
+    if (typeof window === 'undefined' || !date) {
+        return;
+    }
+    
     const startDate = date.toISOString().replace(/-|:|\.\d+/g, '');
     const endDate = new Date(date.getTime() + 60 * 60 * 1000).toISOString().replace(/-|:|\.\d+/g, '');
     const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=Boys Time&dates=${startDate}/${endDate}`;
@@ -50,8 +55,15 @@ function addToCalendar(date: Date) {
 
 export default function Convert() {
     const [selectedTz, setSelectedTz] = useState(timezones[0].tz);
-    const [date, setDate] = useState<Date>(new Date());
-    const [input, setInput] = useState(new Date().toISOString().slice(0, 16));
+    const [date, setDate] = useState<Date | null>(null);
+    const [input, setInput] = useState('');
+    
+    // Initialize date state on client-side only
+    useEffect(() => {
+        const currentDate = new Date();
+        setDate(currentDate);
+        setInput(currentDate.toISOString().slice(0, 16));
+    }, []);
 
     // Update input field with current date time in selected timezone
     const updateInputFromDate = (newDate: Date | null) => {
@@ -177,9 +189,7 @@ export default function Convert() {
                             >
                                 <span className="flex-1 font-semibold text-gray-700">{tz.label}</span>
                                 <span className="ml-4 text-gray-900 font-mono bg-gray-100 px-3 py-1 rounded">
-                                    {(() => {
-                                        return formatTime(date, tz.tz);
-                                    })()}
+                                    {date ? formatTime(date, tz.tz) : ''}
                                 </span>
                             </li>
                         ))}
