@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
+import { DateTime } from 'luxon';
 
 const timezones = [
     { label: 'Dublin', tz: 'Europe/Dublin' },
@@ -8,174 +9,90 @@ const timezones = [
 ];
 
 /**
- * Format the date to a string in the format "HH:MM - ddd dd MMM"
- * @param date the date to format
- * @param tz the timezone to use for formatting
- * @returns the formatted date string
+ * Format the DateTime to a string in the format "HH:MM - ddd dd MMM yyyy"
  */
-function formatTime(date: Date, tz: string) {
-    const formatted = date.toLocaleString('en-ie', {
-        timeZone: tz,
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-        weekday: 'short',
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-    });
-
-    // Format to "HH:MM - ddd dd MMM"
-    const [datePart, timePart] = formatted.split(', ');
-    const [day, month, year] = datePart.split(' ');
-    const [hour, minute] = timePart.split(':');
-    const formattedTime = `${hour}:${minute}`;
-    const formattedDate = `${day} ${month} ${year}`;
-    const finalFormatted = `${formattedTime} - ${formattedDate}`;
-    return finalFormatted;
+function formatTime(dateTime: DateTime) {
+    if (!dateTime.isValid) return '';
+    return dateTime.toFormat('HH:mm - ccc dd LLL');
 }
 
 /**
- * Convert a date to a datetime-local input value string in the context of a timezone
- * @param date The date to convert
- * @param tz The timezone to use
- * @returns A string in format YYYY-MM-DDThh:mm suitable for datetime-local input
+ * Convert a DateTime to a datetime-local input value string
  */
-function dateToLocalString(date: Date, tz: string): string {
-    if (!date) return '';
-    
-    // Get the parts in the target timezone
-    const formatter = new Intl.DateTimeFormat('en-CA', {
-        timeZone: tz,
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false
-    });
-    
-    const parts = formatter.formatToParts(date);
-    const partValues: {[key: string]: string} = {};
-    
-    parts.forEach(part => {
-        partValues[part.type] = part.value;
-    });
-    
-    // Format as YYYY-MM-DDThh:mm
-    return `${partValues.year}-${partValues.month}-${partValues.day}T${partValues.hour}:${partValues.minute}`;
+function dateTimeToLocalString(dateTime: DateTime): string {
+    if (!dateTime.isValid) return '';
+    return dateTime.toFormat("yyyy-MM-dd'T'HH:mm");
 }
 
 /**
- * Create a Date object representing the specified local time in the specified timezone
- * @param localDateString The local date string (YYYY-MM-DDThh:mm)
- * @param tz The timezone
- * @returns A Date object
+ * Create a DateTime object from a datetime-local input value string
  */
-function localStringToDate(localDateString: string, tz: string): Date {
-    if (!localDateString) return new Date();
-    
-    // Parse the local date string
-    const [datePart, timePart] = localDateString.split('T');
-    const [year, month, day] = datePart.split('-').map(Number);
-    const [hour, minute] = timePart.split(':').map(Number);
-    
-    // Create a date string with timezone for the browser to parse
-    const dateString = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`;
-    
-    // Use the Intl API to format the date for the specified timezone
-    const formatter = new Intl.DateTimeFormat('en-US', {
-        timeZone: tz,
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false,
-        timeZoneName: 'short'
-    });
-    
-    // Create a temporary date object to get the timezone offset
-    const tempDate = new Date(dateString);
-    
-    // Get the parts from the formatter
-    const parts = formatter.formatToParts(tempDate);
-    const tzOffset = parts.find(part => part.type === 'timeZoneName')?.value || '';
-    
-    // Create a date string with timezone
-    return new Date(`${dateString} ${tzOffset}`);
+function localStringToDateTime(localDateString: string, tz: string): DateTime {
+    if (!localDateString) return DateTime.now().setZone(tz);
+    return DateTime.fromFormat(localDateString, "yyyy-MM-dd'T'HH:mm", { zone: tz });
 }
 
 /**
  * Add the event to google calendar
- * @param date the date to add to the calendar
  */
-function addToCalendar(date: Date | null) {
-    // Only run on client side
-    if (typeof window === 'undefined' || !date) {
+function addToCalendar(dateTime: DateTime | null) {
+    if (typeof window === 'undefined' || !dateTime || !dateTime.isValid) {
         return;
     }
-    
-    const startDate = date.toISOString().replace(/-|:|\.\d+/g, '');
-    const endDate = new Date(date.getTime() + 60 * 60 * 1000).toISOString().replace(/-|:|\.\d+/g, '');
+
+    const startDate = dateTime.toUTC().toFormat("yyyyMMdd'T'HHmmss'Z'");
+    const endDate = dateTime.plus({ hours: 1 }).toUTC().toFormat("yyyyMMdd'T'HHmmss'Z'");
     const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=Boys Time&dates=${startDate}/${endDate}`;
     window.open(url, '_blank');
 }
 
 export default function Convert() {
     const [selectedTz, setSelectedTz] = useState(timezones[0].tz);
-    const [date, setDate] = useState<Date | null>(null);
+    const [dateTime, setDateTime] = useState<DateTime | null>(null);
     const [input, setInput] = useState('');
-    
+
     // Initialize date state on client-side only
     useEffect(() => {
-        const currentDate = new Date();
-        setDate(currentDate);
-        setInput(dateToLocalString(currentDate, selectedTz));
+        const currentDateTime = DateTime.now().setZone(selectedTz);
+        setDateTime(currentDateTime);
+        setInput(dateTimeToLocalString(currentDateTime));
     }, []);
 
     // Update input field with current date time in selected timezone
-    const updateInputFromDate = (newDate: Date | null) => {
-        if (!newDate) {
-            const currentDate = new Date();
-            setDate(currentDate);
-            setInput(dateToLocalString(currentDate, selectedTz));
+    const updateInputFromDateTime = (newDateTime: DateTime | null) => {
+        if (!newDateTime || !newDateTime.isValid) {
+            const currentDateTime = DateTime.now().setZone(selectedTz);
+            setDateTime(currentDateTime);
+            setInput(dateTimeToLocalString(currentDateTime));
             return;
         }
-        
-        setDate(newDate);
-        setInput(dateToLocalString(newDate, selectedTz));
+
+        setDateTime(newDateTime);
+        setInput(dateTimeToLocalString(newDateTime));
     };
 
     const handleInputChange = (value: string) => {
         setInput(value);
-        const newDate = localStringToDate(value, selectedTz);
-        if (isNaN(newDate.getTime())) {
-            const currentDate = new Date();
-            setDate(currentDate);
-            setInput(dateToLocalString(currentDate, selectedTz));
+        const newDateTime = localStringToDateTime(value, selectedTz);
+        if (!newDateTime.isValid) {
+            const currentDateTime = DateTime.now().setZone(selectedTz);
+            setDateTime(currentDateTime);
+            setInput(dateTimeToLocalString(currentDateTime));
             return;
         }
-        setDate(newDate);
+        setDateTime(newDateTime);
     };
 
     /**
      * Handle timezone change.
      * When timezone changes, we keep the same visual time but in the new timezone
-     * @param value the new timezone value
      */
     const handleTimezoneChange = (value: string) => {
-        if (date) {
-            // Get the date parts from the current input
+        if (dateTime && dateTime.isValid) {
             const localTime = input;
-            
-            // Set the new timezone
             setSelectedTz(value);
-            
-            // Create a new date that has the same local time in the new timezone
-            const newDate = localStringToDate(localTime, value);
-            setDate(newDate);
+            const newDateTime = localStringToDateTime(localTime, value);
+            setDateTime(newDateTime);
         } else {
             setSelectedTz(value);
         }
@@ -210,7 +127,7 @@ export default function Convert() {
                                 className="mt-1 block w-full rounded border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 px-3 py-2"
                             />
                             <button
-                                onClick={() => updateInputFromDate(new Date())}
+                                onClick={() => updateInputFromDateTime(DateTime.now().setZone(selectedTz))}
                                 className="ml-2 mt-1 px-3 py-2 text-blue-600 bg-blue-50 rounded hover:bg-blue-100"
                             >
                                 Now
@@ -219,8 +136,8 @@ export default function Convert() {
                         <div className="flex flex-wrap items-center mt-2 gap-2">
                             <button
                                 onClick={() => {
-                                    const newDate = date ? new Date(date.getTime() + 60 * 60 * 1000) : null;
-                                    updateInputFromDate(newDate);
+                                    const newDateTime = dateTime ? dateTime.plus({ hours: 1 }) : null;
+                                    updateInputFromDateTime(newDateTime);
                                 }}
                                 className="px-3 py-2 text-blue-600 bg-blue-50 rounded hover:bg-blue-100"
                             >
@@ -228,8 +145,8 @@ export default function Convert() {
                             </button>
                             <button
                                 onClick={() => {
-                                    const newDate = date ? new Date(date.getTime() - 60 * 60 * 1000) : null;
-                                    updateInputFromDate(newDate);
+                                    const newDateTime = dateTime ? dateTime.minus({ hours: 1 }) : null;
+                                    updateInputFromDateTime(newDateTime);
                                 }}
                                 className="px-3 py-2 text-blue-600 bg-blue-50 rounded hover:bg-blue-100"
                             >
@@ -237,8 +154,8 @@ export default function Convert() {
                             </button>
                             <button
                                 onClick={() => {
-                                    const newDate = date ? new Date(date.getTime() + 24 * 60 * 60 * 1000) : null;
-                                    updateInputFromDate(newDate);
+                                    const newDateTime = dateTime ? dateTime.plus({ days: 1 }) : null;
+                                    updateInputFromDateTime(newDateTime);
                                 }}
                                 className="px-3 py-2 text-blue-600 bg-blue-50 rounded hover:bg-blue-100"
                             >
@@ -246,8 +163,8 @@ export default function Convert() {
                             </button>
                             <button
                                 onClick={() => {
-                                    const newDate = date ? new Date(date.getTime() - 24 * 60 * 60 * 1000) : null;
-                                    updateInputFromDate(newDate);
+                                    const newDateTime = dateTime ? dateTime.minus({ days: 1 }) : null;
+                                    updateInputFromDateTime(newDateTime);
                                 }}
                                 className="px-3 py-2 text-blue-600 bg-blue-50 rounded hover:bg-blue-100"
                             >
@@ -266,7 +183,7 @@ export default function Convert() {
                             >
                                 <span className="flex-1 font-semibold text-gray-700">{tz.label}</span>
                                 <span className="ml-4 text-gray-900 font-mono bg-gray-100 px-3 py-1 rounded">
-                                    {date ? formatTime(date, tz.tz) : ''}
+                                    {dateTime ? formatTime(dateTime.setZone(tz.tz)) : ''}
                                 </span>
                             </li>
                         ))}
@@ -275,7 +192,7 @@ export default function Convert() {
 
                 <div className="mt-4 flex justify-center">
                     <button
-                        onClick={() => addToCalendar(date)}
+                        onClick={() => addToCalendar(dateTime)}
                         className="px-4 py-2 text-white bg-blue-600 rounded hover:bg-blue-700"
                     >
                         Add to Calendar
