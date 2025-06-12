@@ -124,6 +124,7 @@ export default function Convert() {
                                 type="datetime-local"
                                 value={input}
                                 onChange={e => handleInputChange(e.target.value)}
+                                step="300"
                                 className="mt-1 block w-full rounded border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 px-3 py-2"
                             />
                             <button
