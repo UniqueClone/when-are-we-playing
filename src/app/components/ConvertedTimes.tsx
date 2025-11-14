@@ -3,14 +3,15 @@
 */
 "use client";
 import React from "react";
+import { DateTime } from "luxon";
 
 type Timezone = { label: string; tz: string };
 
 export interface ConvertedTimesProps {
   timezones: Timezone[];
-  date: Date | null;
+  date: DateTime | null;
   mounted: boolean;
-  formatTime: (d: Date, tz: string) => string;
+  formatTime: (d: DateTime, tz: string) => string;
 }
 
 // Matches final formatted pattern width: "18:09 - Fri 14 Nov"

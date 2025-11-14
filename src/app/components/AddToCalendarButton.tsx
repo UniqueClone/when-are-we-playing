@@ -3,9 +3,11 @@
  */
 "use client";
 import React from "react";
+import { DateTime } from "luxon";
+import { calendarRange } from "./time";
 
 interface AddToCalendarButtonProps {
-  date: Date | null;
+  date: DateTime | null;
 }
 
 /**
@@ -17,11 +19,8 @@ export default function AddToCalendarButton({
 }: AddToCalendarButtonProps) {
   const handleClick = () => {
     if (!date) return;
-    const startDate = date.toISOString().replace(/-|:|\.\d+/g, "");
-    const endDate = new Date(date.getTime() + 60 * 60 * 1000)
-      .toISOString()
-      .replace(/-|:|\.\d+/g, "");
-    const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=Boys Time&dates=${startDate}/${endDate}`;
+    const { start, end } = calendarRange(date);
+    const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=Boys Time&dates=${start}/${end}`;
     window.open(url, "_blank");
   };
 

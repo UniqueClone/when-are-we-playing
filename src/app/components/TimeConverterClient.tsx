@@ -1,12 +1,21 @@
 /* Client component handling interactive time conversion.
+   Refactored to use Luxon DateTime for timezone operations.
    Responsive fullscreen mobile, centered panel desktop.
    Shows placeholder times until hydration.
 */
 "use client";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import ConvertedTimes from "./ConvertedTimes";
 import AddToCalendarButton from "./AddToCalendarButton";
 import { Timezone } from "./Timezones";
+import {
+  parseInput,
+  normalizeInput,
+  formatDisplay,
+  nowLocalTruncated,
+  clampToHour,
+} from "./time";
+import { DateTime } from "luxon";
 
 interface TimeConverterClientProps {
   timezones: Timezone[];
@@ -20,73 +29,44 @@ export default function TimeConverterClient({
   // Hydration flag
   const [mounted, setMounted] = useState(false);
 
-  // State
+  // State (Luxon)
   const [selectedTz, setSelectedTz] = useState<string>(timezones[0]?.tz ?? "");
-  const [date, setDate] = useState<Date | null>(null);
+  const [date, setDate] = useState<DateTime | null>(null);
   const [input, setInput] = useState<string>(initialIso);
-
-  // Intl formatters cache
-  const formatters = useMemo(
-    () =>
-      timezones.reduce((acc, tz) => {
-        acc[tz.tz] = new Intl.DateTimeFormat("en-IE", {
-          timeZone: tz.tz,
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: false,
-          weekday: "short",
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-        });
-        return acc;
-      }, {} as Record<string, Intl.DateTimeFormat>),
-    [timezones]
-  );
 
   useEffect(() => {
     // Parse initial date after client mounts to avoid SSR mismatch
-    const parsed = new Date(initialIso);
-    setDate(isNaN(parsed.getTime()) ? new Date() : parsed);
+    const dt = parseInput(initialIso);
+    setDate(dt);
+    setInput(normalizeInput(dt));
     setMounted(true);
   }, [initialIso]);
 
-  const formatTime = (d: Date, tz: string) => {
-    const formatter = formatters[tz];
-    const parts = formatter.formatToParts(d);
-    const get = (type: Intl.DateTimeFormatPartTypes) =>
-      parts.find((p) => p.type === type)?.value || "";
-    const hour = get("hour");
-    const minute = get("minute");
-    const weekday = get("weekday");
-    const day = get("day");
-    const month = get("month");
-    const year = get("year");
-    return `${hour}:${minute} - ${weekday} ${day} ${month} ${year}`;
-  };
-
-  const updateInputFromDate = (newDate: Date | null) => {
-    const target = newDate ?? new Date();
+  const updateInputFromDate = (newDt: DateTime | null) => {
+    const target = newDt ?? nowLocalTruncated();
     setDate(target);
-    setInput(target.toISOString().slice(0, 16));
+    setInput(normalizeInput(target));
   };
 
   const handleInputChange = (value: string) => {
     setInput(value);
-    const newDate = new Date(value);
-    if (isNaN(newDate.getTime())) {
-      const current = new Date();
-      setDate(current);
-      setInput(current.toISOString().slice(0, 16));
+    const parsed = parseInput(value);
+    if (!parsed.isValid) {
+      const fallback = nowLocalTruncated();
+      setDate(fallback);
+      setInput(normalizeInput(fallback));
       return;
     }
-    setDate(newDate);
+    setDate(parsed);
   };
 
   const handleTimezoneChange = (value: string) => {
     setSelectedTz(value);
-    if (date) updateInputFromDate(date);
+    // No mutation of base date; conversions happen in display phase.
   };
+
+  // Display formatting wrapper
+  const formatTime = (dt: DateTime, tz: string) => formatDisplay(dt, tz);
 
   // Unified button style
   const btn =
@@ -94,7 +74,7 @@ export default function TimeConverterClient({
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-      <section className="max-h-fit flex-1 w-full px-4 pt-6 pb-24 sm:pb-12 font-sans sm:max-w-2xl sm:mx-auto sm:rounded-2xl sm:border sm:border-slate-200 sm:shadow-md sm:bg-white/80 dark:sm:border-slate-700 dark:sm:bg-slate-900/70 flex flex-col">
+      <section className="flex-1 w-full px-4 pt-6 pb-24 sm:pb-12 font-sans sm:max-w-2xl sm:mx-auto sm:rounded-2xl sm:border sm:border-slate-200 sm:shadow-md sm:bg-white/80 dark:sm:border-slate-700 dark:sm:bg-slate-900/70 flex flex-col">
         <header className="mb-6">
           <h2 className="text-3xl font-bold tracking-tight text-center text-slate-900 dark:text-slate-100">
             Time Converter
@@ -130,7 +110,7 @@ export default function TimeConverterClient({
                   className="flex-1 rounded-md border border-gray-300 dark:border-slate-600 shadow-sm bg-white dark:bg-slate-800 focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 px-3 py-2"
                 />
                 <button
-                  onClick={() => updateInputFromDate(new Date())}
+                  onClick={() => updateInputFromDate(nowLocalTruncated())}
                   className={btn}
                 >
                   Now
@@ -141,7 +121,7 @@ export default function TimeConverterClient({
                 <button
                   onClick={() =>
                     updateInputFromDate(
-                      date ? new Date(date.getTime() + 60 * 60 * 1000) : null
+                      date ? date.plus({ hours: 1 }) : nowLocalTruncated()
                     )
                   }
                   className={btn}
@@ -151,7 +131,7 @@ export default function TimeConverterClient({
                 <button
                   onClick={() =>
                     updateInputFromDate(
-                      date ? new Date(date.getTime() - 60 * 60 * 1000) : null
+                      date ? date.minus({ hours: 1 }) : nowLocalTruncated()
                     )
                   }
                   className={btn}
@@ -161,9 +141,7 @@ export default function TimeConverterClient({
                 <button
                   onClick={() =>
                     updateInputFromDate(
-                      date
-                        ? new Date(date.getTime() + 24 * 60 * 60 * 1000)
-                        : null
+                      date ? date.plus({ days: 1 }) : nowLocalTruncated()
                     )
                   }
                   className={btn}
@@ -173,9 +151,7 @@ export default function TimeConverterClient({
                 <button
                   onClick={() =>
                     updateInputFromDate(
-                      date
-                        ? new Date(date.getTime() - 24 * 60 * 60 * 1000)
-                        : null
+                      date ? date.minus({ days: 1 }) : nowLocalTruncated()
                     )
                   }
                   className={btn}
@@ -183,23 +159,27 @@ export default function TimeConverterClient({
                   -1d
                 </button>
                 <button
-                  onClick={() => {
-                    if (date) {
-                      const d = new Date(date);
-                      d.setMinutes(0, 0, 0);
-                      updateInputFromDate(d);
-                    }
-                  }}
+                  onClick={() =>
+                    updateInputFromDate(
+                      date ? clampToHour(date) : nowLocalTruncated()
+                    )
+                  }
                   className={btn}
                 >
                   :00
+                </button>
+                <button
+                  onClick={() => updateInputFromDate(nowLocalTruncated())}
+                  className={btn}
+                >
+                  Reset
                 </button>
               </div>
             </div>
           </label>
         </div>
 
-        <div className="flex-1 flex flex-col justify-center">
+        <div className="flex-1 overflow-y-auto w-full">
           <ConvertedTimes
             timezones={timezones}
             date={date}
