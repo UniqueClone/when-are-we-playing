@@ -1,5 +1,6 @@
 /* Client component handling interactive time conversion.
    Refactored to use Luxon DateTime for timezone operations.
+   Base date now resides in selected timezone (input reflects selected timezone).
    Responsive fullscreen mobile, centered panel desktop.
    Shows placeholder times until hydration.
 */
@@ -9,10 +10,10 @@ import ConvertedTimes from "./ConvertedTimes";
 import AddToCalendarButton from "./AddToCalendarButton";
 import { Timezone } from "./Timezones";
 import {
-  parseInput,
+  parseInputForZone,
   normalizeInput,
   formatDisplay,
-  nowLocalTruncated,
+  nowInZoneTruncated,
   clampToHour,
 } from "./time";
 import { DateTime } from "luxon";
@@ -26,33 +27,32 @@ export default function TimeConverterClient({
   timezones,
   initialIso,
 }: TimeConverterClientProps) {
-  // Hydration flag
   const [mounted, setMounted] = useState(false);
-
-  // State (Luxon)
   const [selectedTz, setSelectedTz] = useState<string>(timezones[0]?.tz ?? "");
   const [date, setDate] = useState<DateTime | null>(null);
   const [input, setInput] = useState<string>(initialIso);
 
+  // Initialize date in selected timezone after mount (to avoid SSR mismatch).
   useEffect(() => {
-    // Parse initial date after client mounts to avoid SSR mismatch
-    const dt = parseInput(initialIso);
-    setDate(dt);
-    setInput(normalizeInput(dt));
-    setMounted(true);
-  }, [initialIso]);
+    if (!mounted) {
+      const dt = parseInputForZone(initialIso, selectedTz);
+      setDate(dt);
+      setInput(normalizeInput(dt));
+      setMounted(true);
+    }
+  }, [initialIso, selectedTz, mounted]);
 
   const updateInputFromDate = (newDt: DateTime | null) => {
-    const target = newDt ?? nowLocalTruncated();
+    const target = newDt ?? nowInZoneTruncated(selectedTz);
     setDate(target);
     setInput(normalizeInput(target));
   };
 
   const handleInputChange = (value: string) => {
     setInput(value);
-    const parsed = parseInput(value);
+    const parsed = parseInputForZone(value, selectedTz);
     if (!parsed.isValid) {
-      const fallback = nowLocalTruncated();
+      const fallback = nowInZoneTruncated(selectedTz);
       setDate(fallback);
       setInput(normalizeInput(fallback));
       return;
@@ -62,13 +62,17 @@ export default function TimeConverterClient({
 
   const handleTimezoneChange = (value: string) => {
     setSelectedTz(value);
-    // No mutation of base date; conversions happen in display phase.
+    setDate((prev) => {
+      const base = prev ?? nowInZoneTruncated(value);
+      // Preserve displayed wall time when changing timezone.
+      const rezoned = base.setZone(value, { keepLocalTime: true });
+      setInput(normalizeInput(rezoned));
+      return rezoned;
+    });
   };
 
-  // Display formatting wrapper
   const formatTime = (dt: DateTime, tz: string) => formatDisplay(dt, tz);
 
-  // Unified button style
   const btn =
     "inline-flex items-center justify-center rounded-md px-3 py-2 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 shadow-sm dark:shadow-none transition";
 
@@ -110,7 +114,9 @@ export default function TimeConverterClient({
                   className="flex-1 rounded-md border border-gray-300 dark:border-slate-600 shadow-sm bg-white dark:bg-slate-800 focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 px-3 py-2"
                 />
                 <button
-                  onClick={() => updateInputFromDate(nowLocalTruncated())}
+                  onClick={() =>
+                    updateInputFromDate(nowInZoneTruncated(selectedTz))
+                  }
                   className={btn}
                 >
                   Now
@@ -121,7 +127,9 @@ export default function TimeConverterClient({
                 <button
                   onClick={() =>
                     updateInputFromDate(
-                      date ? date.plus({ hours: 1 }) : nowLocalTruncated()
+                      date
+                        ? date.plus({ hours: 1 })
+                        : nowInZoneTruncated(selectedTz)
                     )
                   }
                   className={btn}
@@ -131,7 +139,9 @@ export default function TimeConverterClient({
                 <button
                   onClick={() =>
                     updateInputFromDate(
-                      date ? date.minus({ hours: 1 }) : nowLocalTruncated()
+                      date
+                        ? date.minus({ hours: 1 })
+                        : nowInZoneTruncated(selectedTz)
                     )
                   }
                   className={btn}
@@ -141,7 +151,9 @@ export default function TimeConverterClient({
                 <button
                   onClick={() =>
                     updateInputFromDate(
-                      date ? date.plus({ days: 1 }) : nowLocalTruncated()
+                      date
+                        ? date.plus({ days: 1 })
+                        : nowInZoneTruncated(selectedTz)
                     )
                   }
                   className={btn}
@@ -151,7 +163,9 @@ export default function TimeConverterClient({
                 <button
                   onClick={() =>
                     updateInputFromDate(
-                      date ? date.minus({ days: 1 }) : nowLocalTruncated()
+                      date
+                        ? date.minus({ days: 1 })
+                        : nowInZoneTruncated(selectedTz)
                     )
                   }
                   className={btn}
@@ -161,7 +175,7 @@ export default function TimeConverterClient({
                 <button
                   onClick={() =>
                     updateInputFromDate(
-                      date ? clampToHour(date) : nowLocalTruncated()
+                      date ? clampToHour(date) : nowInZoneTruncated(selectedTz)
                     )
                   }
                   className={btn}
@@ -169,7 +183,9 @@ export default function TimeConverterClient({
                   :00
                 </button>
                 <button
-                  onClick={() => updateInputFromDate(nowLocalTruncated())}
+                  onClick={() =>
+                    updateInputFromDate(nowInZoneTruncated(selectedTz))
+                  }
                   className={btn}
                 >
                   Reset
@@ -179,7 +195,7 @@ export default function TimeConverterClient({
           </label>
         </div>
 
-        <div className="flex-1 overflow-y-auto w-full">
+        <div className="flex-1 overflow-y-auto">
           <ConvertedTimes
             timezones={timezones}
             date={date}

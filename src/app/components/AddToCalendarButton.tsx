@@ -20,7 +20,7 @@ export default function AddToCalendarButton({
   const handleClick = () => {
     if (!date) return;
     const { start, end } = calendarRange(date);
-    const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=Boys Time&dates=${start}/${end}`;
+    const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=Boys Time&dates=${start}/${end}&details=Scheduled+via+When+Are+We+Playing&sf=true&output=xml&ctz=${date.zoneName}`;
     window.open(url, "_blank");
   };
 

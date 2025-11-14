@@ -5,6 +5,11 @@ export function parseInput(iso: string): DateTime {
   return dt.isValid ? dt : DateTime.local();
 }
 
+export function parseInputForZone(iso: string, zone: string): DateTime {
+  const dt = DateTime.fromISO(iso, { zone });
+  return dt.isValid ? dt : DateTime.now().setZone(zone);
+}
+
 export function normalizeInput(dt: DateTime): string {
   return dt.toFormat("yyyy-LL-dd'T'HH:mm");
 }
@@ -26,6 +31,10 @@ export function calendarRange(base: DateTime) {
 export function nowLocalTruncated(): DateTime {
   const n = DateTime.local();
   return n.set({ second: 0, millisecond: 0 });
+}
+
+export function nowInZoneTruncated(zone: string): DateTime {
+  return DateTime.now().setZone(zone).set({ second: 0, millisecond: 0 });
 }
 
 export function clampToHour(dt: DateTime): DateTime {
