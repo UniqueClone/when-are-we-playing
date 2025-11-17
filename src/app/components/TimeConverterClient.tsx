@@ -182,14 +182,6 @@ export default function TimeConverterClient({
                 >
                   :00
                 </button>
-                <button
-                  onClick={() =>
-                    updateInputFromDate(nowInZoneTruncated(selectedTz))
-                  }
-                  className={btn}
-                >
-                  Reset
-                </button>
               </div>
             </div>
           </label>
