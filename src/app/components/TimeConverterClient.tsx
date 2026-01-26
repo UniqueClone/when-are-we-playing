@@ -73,26 +73,35 @@ export default function TimeConverterClient({
 
   const formatTime = (dt: DateTime, tz: string) => formatDisplay(dt, tz);
 
-  const btn =
-    "inline-flex items-center justify-center rounded-md px-3 py-2 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 shadow-sm dark:shadow-none transition";
+  const btnPrimary =
+    "inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] transition-all";
+
+  const btnSecondary =
+    "inline-flex items-center justify-center rounded-lg px-3 py-2 text-sm font-medium bg-[var(--card)] text-[var(--foreground)] border border-[var(--card-border)] hover:bg-[var(--card-border)] active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] transition-all";
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-      <main id="main-content" className="max-h-fit flex-1 w-full px-4 pt-6 pb-24 sm:pb-12 font-sans sm:max-w-2xl sm:mx-auto sm:rounded-2xl sm:border sm:border-slate-200 sm:shadow-md sm:bg-white/80 dark:sm:border-slate-700 dark:sm:bg-slate-900/70 flex flex-col">
-        <header className="mb-6">
-          <h2 className="text-3xl font-bold tracking-tight text-center text-slate-900 dark:text-slate-100">
-            Time Converter
-          </h2>
-          <div className="mt-4 h-px w-full bg-gradient-to-r from-transparent via-slate-300 to-transparent dark:via-slate-700" />
+    <div className="min-h-screen bg-[var(--background)]">
+      <main id="main-content" className="w-full min-h-screen px-4 py-6 sm:py-10 sm:px-6 md:max-w-xl md:mx-auto">
+        <header className="mb-8 text-center">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--foreground)]">
+            When Are We Playing?
+          </h1>
+          <p className="mt-2 text-sm text-[var(--muted)]">
+            Find the perfect time across timezones
+          </p>
         </header>
 
-        <div className="mb-6">
-          <label className="block mb-2 font-medium text-slate-700 dark:text-slate-200">
-            Timezone:
+        {/* Card */}
+        <div className="bg-[var(--card)] border border-[var(--card-border)] rounded-2xl p-4 sm:p-6 space-y-6">
+          {/* Timezone selector */}
+          <div>
+            <label className="block text-sm font-medium text-[var(--muted)] mb-2">
+              Your timezone
+            </label>
             <select
               value={selectedTz}
               onChange={(e) => handleTimezoneChange(e.target.value)}
-              className="mt-2 block w-full rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 px-3 py-2"
+              className="w-full rounded-lg border border-[var(--card-border)] bg-[var(--background)] text-[var(--foreground)] px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent transition"
             >
               {timezones.map((tz) => (
                 <option key={tz.tz} value={tz.tz}>
@@ -100,109 +109,100 @@ export default function TimeConverterClient({
                 </option>
               ))}
             </select>
-          </label>
-        </div>
+          </div>
 
-        <div className="mb-6">
-          <label className="block mb-2 font-medium text-slate-700 dark:text-slate-200">
-            <div className="flex flex-col gap-3">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                <input
-                  type="datetime-local"
-                  value={input}
-                  onChange={(e) => handleInputChange(e.target.value)}
-                  aria-label="Select date and time"
-                  className="flex-1 rounded-md border border-gray-300 dark:border-slate-600 shadow-sm bg-white dark:bg-slate-800 focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 px-3 py-2"
-                />
-                <button
-                  onClick={() =>
-                    updateInputFromDate(nowInZoneTruncated(selectedTz))
-                  }
-                  className={btn}
-                >
-                  Now
-                </button>
-              </div>
-
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                <button
-                  onClick={() =>
-                    updateInputFromDate(
-                      date
-                        ? date.plus({ hours: 1 })
-                        : nowInZoneTruncated(selectedTz)
-                    )
-                  }
-                  aria-label="Add one hour"
-                  className={btn}
-                >
-                  +1hr
-                </button>
-                <button
-                  onClick={() =>
-                    updateInputFromDate(
-                      date
-                        ? date.minus({ hours: 1 })
-                        : nowInZoneTruncated(selectedTz)
-                    )
-                  }
-                  aria-label="Subtract one hour"
-                  className={btn}
-                >
-                  -1hr
-                </button>
-                <button
-                  onClick={() =>
-                    updateInputFromDate(
-                      date
-                        ? date.plus({ days: 1 })
-                        : nowInZoneTruncated(selectedTz)
-                    )
-                  }
-                  aria-label="Add one day"
-                  className={btn}
-                >
-                  +1d
-                </button>
-                <button
-                  onClick={() =>
-                    updateInputFromDate(
-                      date
-                        ? date.minus({ days: 1 })
-                        : nowInZoneTruncated(selectedTz)
-                    )
-                  }
-                  aria-label="Subtract one day"
-                  className={btn}
-                >
-                  -1d
-                </button>
-                <button
-                  onClick={() =>
-                    updateInputFromDate(
-                      date ? clampToHour(date) : nowInZoneTruncated(selectedTz)
-                    )
-                  }
-                  aria-label="Round down to hour"
-                  className={btn}
-                >
-                  :00
-                </button>
-              </div>
+          {/* Date/time input */}
+          <div>
+            <label className="block text-sm font-medium text-[var(--muted)] mb-2">
+              Date & time
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="datetime-local"
+                value={input}
+                onChange={(e) => handleInputChange(e.target.value)}
+                aria-label="Select date and time"
+                className="flex-1 rounded-lg border border-[var(--card-border)] bg-[var(--background)] text-[var(--foreground)] px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent transition"
+              />
+              <button
+                onClick={() => updateInputFromDate(nowInZoneTruncated(selectedTz))}
+                className={btnPrimary}
+              >
+                Now
+              </button>
             </div>
-          </label>
+
+            {/* Quick adjust buttons */}
+            <div className="grid grid-cols-5 gap-2 mt-3">
+              <button
+                onClick={() =>
+                  updateInputFromDate(
+                    date ? date.minus({ hours: 1 }) : nowInZoneTruncated(selectedTz)
+                  )
+                }
+                aria-label="Subtract one hour"
+                className={btnSecondary}
+              >
+                −1h
+              </button>
+              <button
+                onClick={() =>
+                  updateInputFromDate(
+                    date ? date.plus({ hours: 1 }) : nowInZoneTruncated(selectedTz)
+                  )
+                }
+                aria-label="Add one hour"
+                className={btnSecondary}
+              >
+                +1h
+              </button>
+              <button
+                onClick={() =>
+                  updateInputFromDate(
+                    date ? date.minus({ days: 1 }) : nowInZoneTruncated(selectedTz)
+                  )
+                }
+                aria-label="Subtract one day"
+                className={btnSecondary}
+              >
+                −1d
+              </button>
+              <button
+                onClick={() =>
+                  updateInputFromDate(
+                    date ? date.plus({ days: 1 }) : nowInZoneTruncated(selectedTz)
+                  )
+                }
+                aria-label="Add one day"
+                className={btnSecondary}
+              >
+                +1d
+              </button>
+              <button
+                onClick={() =>
+                  updateInputFromDate(
+                    date ? clampToHour(date) : nowInZoneTruncated(selectedTz)
+                  )
+                }
+                aria-label="Round down to hour"
+                className={btnSecondary}
+              >
+                :00
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
-          <ConvertedTimes
-            timezones={timezones}
-            date={date}
-            mounted={mounted}
-            formatTime={formatTime}
-          />
-        </div>
+        {/* Converted times */}
+        <ConvertedTimes
+          timezones={timezones}
+          date={date}
+          mounted={mounted}
+          formatTime={formatTime}
+        />
 
-        <div className="mt-auto pt-6 flex justify-center">
+        {/* Calendar button */}
+        <div className="mt-6 flex justify-center">
           <AddToCalendarButton date={date} />
         </div>
       </main>
