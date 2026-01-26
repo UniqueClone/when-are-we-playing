@@ -78,7 +78,7 @@ export default function TimeConverterClient({
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-      <section className="max-h-fit flex-1 w-full px-4 pt-6 pb-24 sm:pb-12 font-sans sm:max-w-2xl sm:mx-auto sm:rounded-2xl sm:border sm:border-slate-200 sm:shadow-md sm:bg-white/80 dark:sm:border-slate-700 dark:sm:bg-slate-900/70 flex flex-col">
+      <main id="main-content" className="max-h-fit flex-1 w-full px-4 pt-6 pb-24 sm:pb-12 font-sans sm:max-w-2xl sm:mx-auto sm:rounded-2xl sm:border sm:border-slate-200 sm:shadow-md sm:bg-white/80 dark:sm:border-slate-700 dark:sm:bg-slate-900/70 flex flex-col">
         <header className="mb-6">
           <h2 className="text-3xl font-bold tracking-tight text-center text-slate-900 dark:text-slate-100">
             Time Converter
@@ -205,7 +205,7 @@ export default function TimeConverterClient({
         <div className="mt-auto pt-6 flex justify-center">
           <AddToCalendarButton date={date} />
         </div>
-      </section>
+      </main>
     </div>
   );
 }
