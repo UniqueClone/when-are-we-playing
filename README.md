@@ -4,7 +4,7 @@ A simple timezone converter app to help coordinate gaming sessions (or any event
 
 ## Features
 
-- 🌍 **Multi-timezone support** - Convert times between Dublin, Madrid, and Perth
+- 🌍 **Multi-timezone support** - Convert times between Dublin, Amsterdam, and Perth
 - ⏰ **Quick time adjustments** - Add/subtract hours or days with one click
 - 📅 **Google Calendar integration** - Add events directly to your calendar
 - 🌙 **Dark mode support** - Respects your system preferences
