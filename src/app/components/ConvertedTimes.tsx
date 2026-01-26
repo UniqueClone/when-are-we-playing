@@ -4,8 +4,7 @@
 "use client";
 import React from "react";
 import { DateTime } from "luxon";
-
-type Timezone = { label: string; tz: string };
+import { Timezone } from "./Timezones";
 
 export interface ConvertedTimesProps {
   timezones: Timezone[];

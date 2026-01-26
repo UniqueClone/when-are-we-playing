@@ -1,10 +1,5 @@
 import { DateTime } from "luxon";
 
-export function parseInput(iso: string): DateTime {
-  const dt = DateTime.fromISO(iso, { zone: "local" });
-  return dt.isValid ? dt : DateTime.local();
-}
-
 export function parseInputForZone(iso: string, zone: string): DateTime {
   const dt = DateTime.fromISO(iso, { zone });
   return dt.isValid ? dt : DateTime.now().setZone(zone);
@@ -28,11 +23,6 @@ export function calendarRange(base: DateTime) {
   };
 }
 
-export function nowLocalTruncated(): DateTime {
-  const n = DateTime.local();
-  return n.set({ second: 0, millisecond: 0 });
-}
-
 export function nowInZoneTruncated(zone: string): DateTime {
   return DateTime.now().setZone(zone).set({ second: 0, millisecond: 0 });
 }
@@ -40,5 +30,3 @@ export function nowInZoneTruncated(zone: string): DateTime {
 export function clampToHour(dt: DateTime): DateTime {
   return dt.set({ minute: 0, second: 0, millisecond: 0 });
 }
-
-export type TzDescriptor = { label: string; tz: string };
