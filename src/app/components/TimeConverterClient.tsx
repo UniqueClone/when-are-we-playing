@@ -111,6 +111,7 @@ export default function TimeConverterClient({
                   type="datetime-local"
                   value={input}
                   onChange={(e) => handleInputChange(e.target.value)}
+                  aria-label="Select date and time"
                   className="flex-1 rounded-md border border-gray-300 dark:border-slate-600 shadow-sm bg-white dark:bg-slate-800 focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 px-3 py-2"
                 />
                 <button
@@ -132,6 +133,7 @@ export default function TimeConverterClient({
                         : nowInZoneTruncated(selectedTz)
                     )
                   }
+                  aria-label="Add one hour"
                   className={btn}
                 >
                   +1hr
@@ -144,6 +146,7 @@ export default function TimeConverterClient({
                         : nowInZoneTruncated(selectedTz)
                     )
                   }
+                  aria-label="Subtract one hour"
                   className={btn}
                 >
                   -1hr
@@ -156,6 +159,7 @@ export default function TimeConverterClient({
                         : nowInZoneTruncated(selectedTz)
                     )
                   }
+                  aria-label="Add one day"
                   className={btn}
                 >
                   +1d
@@ -168,6 +172,7 @@ export default function TimeConverterClient({
                         : nowInZoneTruncated(selectedTz)
                     )
                   }
+                  aria-label="Subtract one day"
                   className={btn}
                 >
                   -1d
@@ -178,6 +183,7 @@ export default function TimeConverterClient({
                       date ? clampToHour(date) : nowInZoneTruncated(selectedTz)
                     )
                   }
+                  aria-label="Round down to hour"
                   className={btn}
                 >
                   :00
