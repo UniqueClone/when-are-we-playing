@@ -18,5 +18,3 @@ A browser-based utility for generating PWA icons from the source SVG file.
 2. Open http://localhost:8000/generate-icons.html in your browser
 
 3. Click "Generate All Icons" to download all required icon sizes
-
-See [ICON-SETUP.md](../ICON-SETUP.md) for complete instructions.
