@@ -52,7 +52,7 @@ Edit `src/app/components/Timezones.ts` to customize the available timezones:
 ```typescript
 export const TIMEZONES: Timezone[] = [
   { label: "Dublin", tz: "Europe/Dublin" },
-  { label: "Madrid", tz: "Europe/Madrid" },
+  { label: "Amsterdam", tz: "Europe/Amsterdam" },
   { label: "Perth", tz: "Australia/Perth" },
   // Add more timezones using IANA timezone identifiers
 ];
