@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PWA Icon Generator</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333;
+      margin-top: 0;
+    }
+    button {
+      background: #6366f1;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      margin: 10px 10px 10px 0;
+    }
+    button:hover {
+      background: #5558e3;
+    }
+    .preview {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin: 30px 0;
+    }
+    .preview-item {
+      text-align: center;
+    }
+    .preview-item img {
+      display: block;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      background: #f9fafb;
+    }
+    .preview-item p {
+      margin: 8px 0 0;
+      font-size: 14px;
+      color: #6b7280;
+    }
+    .status {
+      margin: 20px 0;
+      padding: 12px;
+      background: #f0fdf4;
+      border: 1px solid #86efac;
+      border-radius: 8px;
+      color: #166534;
+      display: none;
+    }
+    .status.show {
+      display: block;
+    }
+    .instructions {
+      background: #eff6ff;
+      border: 1px solid #93c5fd;
+      border-radius: 8px;
+      padding: 16px;
+      margin: 20px 0;
+      color: #1e40af;
+    }
+    .instructions h3 {
+      margin-top: 0;
+      color: #1e3a8a;
+    }
+    .instructions ol {
+      margin: 8px 0;
+      padding-left: 24px;
+    }
+    .instructions li {
+      margin: 4px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎮 PWA Icon Generator</h1>
+    <p>This tool generates all the required PWA icons from your SVG file.</p>
+
+    <div class="instructions">
+      <h3>Instructions:</h3>
+      <ol>
+        <li>Click "Generate All Icons" below</li>
+        <li>Each icon will download automatically</li>
+        <li>Save all icons to the <code>public</code> folder of your project</li>
+        <li>The favicon.ico should go in <code>src/app/favicon.ico</code></li>
+      </ol>
+    </div>
+
+    <button onclick="generateAllIcons()">Generate All Icons</button>
+    <button onclick="generateFavicon()">Generate Favicon Only</button>
+
+    <div id="status" class="status"></div>
+
+    <div class="preview" id="preview"></div>
+  </div>
+
+  <script>
+    const sizes = [
+      { name: 'favicon', size: 32, filename: 'favicon.ico' },
+      { name: 'apple-touch-icon', size: 180, filename: 'apple-touch-icon.png' },
+      { name: 'icon-192', size: 192, filename: 'icon-192.png' },
+      { name: 'icon-512', size: 512, filename: 'icon-512.png' },
+      { name: 'icon-maskable-512', size: 512, filename: 'icon-maskable-512.png', maskable: true }
+    ];
+
+    function showStatus(message) {
+      const status = document.getElementById('status');
+      status.textContent = message;
+      status.classList.add('show');
+      setTimeout(() => status.classList.remove('show'), 3000);
+    }
+
+    function addPreview(dataUrl, name, size) {
+      const preview = document.getElementById('preview');
+      const item = document.createElement('div');
+      item.className = 'preview-item';
+      item.innerHTML = `
+        <img src="${dataUrl}" width="${Math.min(size, 128)}" height="${Math.min(size, 128)}" alt="${name}">
+        <p>${name}<br>${size}x${size}</p>
+      `;
+      preview.appendChild(item);
+    }
+
+    async function generateIcon(config) {
+      const { name, size, filename, maskable } = config;
+
+      // Load SVG (from public folder - one directory up)
+      const svgResponse = await fetch('../public/icon.svg');
+      const svgText = await svgResponse.text();
+
+      // Create canvas
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+
+      // For maskable icons, add safe zone (80% of icon in center)
+      if (maskable) {
+        // Use white background for safe zone
+        ctx.fillStyle = '#6366f1';
+        ctx.fillRect(0, 0, size, size);
+
+        // Scale down the SVG to 80% and center it
+        const img = new Image();
+        const svgBlob = new Blob([svgText], { type: 'image/svg+xml' });
+        const url = URL.createObjectURL(svgBlob);
+
+        return new Promise((resolve) => {
+          img.onload = () => {
+            const scaledSize = size * 0.8;
+            const offset = size * 0.1;
+            ctx.drawImage(img, offset, offset, scaledSize, scaledSize);
+            URL.revokeObjectURL(url);
+
+            canvas.toBlob((blob) => {
+              const dataUrl = canvas.toDataURL('image/png');
+              addPreview(dataUrl, name, size);
+              downloadBlob(blob, filename);
+              resolve();
+            }, 'image/png');
+          };
+          img.src = url;
+        });
+      } else {
+        // Regular icon - full size
+        const img = new Image();
+        const svgBlob = new Blob([svgText], { type: 'image/svg+xml' });
+        const url = URL.createObjectURL(svgBlob);
+
+        return new Promise((resolve) => {
+          img.onload = () => {
+            ctx.drawImage(img, 0, 0, size, size);
+            URL.revokeObjectURL(url);
+
+            canvas.toBlob((blob) => {
+              const dataUrl = canvas.toDataURL('image/png');
+              addPreview(dataUrl, name, size);
+              downloadBlob(blob, filename);
+              resolve();
+            }, 'image/png');
+          };
+          img.src = url;
+        });
+      }
+    }
+
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    async function generateAllIcons() {
+      document.getElementById('preview').innerHTML = '';
+      showStatus('Generating all icons...');
+
+      for (const config of sizes) {
+        await generateIcon(config);
+        await new Promise(resolve => setTimeout(resolve, 500)); // Delay between downloads
+      }
+
+      showStatus('All icons generated successfully! Check your downloads folder.');
+    }
+
+    async function generateFavicon() {
+      document.getElementById('preview').innerHTML = '';
+      showStatus('Generating favicon...');
+      await generateIcon(sizes[0]);
+      showStatus('Favicon generated! Save it to src/app/favicon.ico');
+    }
+  </script>
+</body>
+</html>
